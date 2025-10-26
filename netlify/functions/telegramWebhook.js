@@ -1,100 +1,118 @@
+// netlify/functions/telegramWebhook.js
 import fetch from "node-fetch";
 
-const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const OWNER_CHAT_IDS = process.env.OWNER_CHAT_IDS.split(",");
+export default async (req, res) => {
+  try {
+    // Safely handle body parsing
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const message = body.message || body.channel_post || {};
+    const chatId = message.chat?.id;
+    const text = message.text?.trim();
+    const callback = body.callback_query;
 
-let products=[];
+    const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+    const OWNER_IDS = (process.env.OWNER_CHAT_IDS || "").split(",").map(x => x.trim());
 
-async function sendMessage(chatId,text,replyMarkup=null){
-  const body={chat_id:chatId,text};
-  if(replyMarkup) body.reply_markup=replyMarkup;
-  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,{
-    method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)
-  });
-}
-
-async function sendProduct(chatId,product){
-  const keyboard={inline_keyboard:[[{text:"❤️ Like",callback_data:`like_${product.id}`},{text:"🛒 Order",callback_data:`order_${product.id}` }]]};
-  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`,{
-    method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({chat_id:chatId,photo:product.image,caption:`${product.name}\nPrice: ${product.price} ETB\n${product.description}`,reply_markup:keyboard})
-  });
-}
-
-export default async (req,res)=>{
-  try{
-    const body=JSON.parse(req.body);
-
-    if(body.message){
-      const chatId=body.message.chat.id;
-      const text=body.message.text;
-      const username=body.message.from.username || body.message.from.first_name;
-
-      if(text && !text.startsWith("/")){
-        OWNER_CHAT_IDS.forEach(async id=>{
-          await sendMessage(id,`💬 Message from @${username}: ${text}`);
-        });
-        return res.status(200).send("OK");
-      }
-
-      if(text=="/start") await sendMessage(chatId,"👋 Welcome! Use /products to see catalog.");
-      if(text=="/products") for(const p of products) await sendProduct(chatId,p);
-
-      // Admin commands
-      if(text.startsWith("/add") && OWNER_CHAT_IDS.includes(chatId.toString())){
-        const args=text.replace("/add ","").split("|");
-        if(args.length<4) return sendMessage(chatId,"❌ Format: /add name|price|description|imageURL");
-        const [name,price,description,image]=args;
-        const newId=products.length+1;
-        products.push({id:newId,name,price,description,image,likes:0,time:Date.now()});
-        await sendMessage(chatId,`✅ Product added: ${name}`);
-      }
-
-      if(text.startsWith("/edit") && OWNER_CHAT_IDS.includes(chatId.toString())){
-        const args=text.replace("/edit ","").split("|");
-        if(args.length<5) return sendMessage(chatId,"❌ Format: /edit id|name|price|description|imageURL");
-        const [id,name,price,description,image]=args;
-        const product=products.find(p=>p.id==id);
-        if(!product) return sendMessage(chatId,"❌ Product not found");
-        product.name=name; product.price=price; product.description=description; product.image=image;
-        await sendMessage(chatId,`✅ Product #${id} updated`);
-      }
+    // Quick sanity check
+    if (!BOT_TOKEN) {
+      console.error("❌ Missing TELEGRAM_BOT_TOKEN in env");
+      return res.status(500).send("Missing bot token");
     }
 
-    else if(body.callback_query){
-      const callback=body.callback_query;
-      const data=callback.data;
-      const chatId=callback.message.chat.id;
+    // === Handle callback_query (likes or orders) ===
+    if (callback) {
+      const cbData = callback.data;
+      const cbChat = callback.message.chat.id;
+      const cbMsgId = callback.message.message_id;
+      let replyText = "";
 
-      if(data.startsWith("like_")){
-        const id=data.split("_")[1];
-        const product=products.find(p=>p.id==id);
-        product.likes++;
-        await sendMessage(chatId,`❤️ You liked ${product.name}. Total likes: ${product.likes}`);
+      if (cbData.startsWith("like_")) {
+        replyText = "❤️ Thanks for liking!";
+      } else if (cbData.startsWith("order_")) {
+        replyText = "🛍 Please contact us on WhatsApp or Telegram to finalize your order.";
       }
 
-      if(data.startsWith("order_")){
-        const id=data.split("_")[1];
-        const product=products.find(p=>p.id==id);
-        OWNER_CHAT_IDS.forEach(async id=>{
-          await sendMessage(id,`🛍️ New order: ${product.name} from @${callback.from.username || callback.from.first_name}`);
-        });
-        const keyboard={keyboard:[[ {text:"📍 Send Location", request_location:true} ]],one_time_keyboard:true};
-        await sendMessage(chatId,"Please share your location for delivery:",keyboard);
-      }
-    }
-
-    if(body.message && body.message.location){
-      const loc=body.message.location;
-      OWNER_CHAT_IDS.forEach(async id=>{
-        await sendMessage(id,`📍 Location from @${body.message.from.username || body.message.from.first_name}: Lat ${loc.latitude}, Lng ${loc.longitude}`);
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callback_query_id: callback.id,
+          text: replyText,
+          show_alert: false
+        })
       });
-      await sendMessage(body.message.chat.id,"✅ Location received. We will process your order!");
+
+      return res.status(200).send("Callback handled");
     }
 
-    res.status(200).send("OK");
-  }catch(err){
-    console.error(err);
-    res.status(500).send("Error processing webhook");
+    // === Normal commands ===
+    if (text === "/start") {
+      await sendText(chatId, BOT_TOKEN, "👗 Welcome to Dilla Fashion Store!\nUse /products to see our catalog.");
+    } else if (text === "/products") {
+      const products = [
+        { id: 1, name: "Men T-Shirt", price: 450, desc: "Size M, Cotton, White", img: "https://via.placeholder.com/300x200?text=T-Shirt" },
+        { id: 2, name: "Ladies Dress", price: 850, desc: "Size M, Silk, Red", img: "https://via.placeholder.com/300x200?text=Dress" },
+        { id: 3, name: "Children Set", price: 500, desc: "Size S, Cotton, Blue", img: "https://via.placeholder.com/300x200?text=Child+Set" }
+      ];
+
+      for (const p of products) {
+        await sendPhoto(chatId, BOT_TOKEN, p.img, `${p.name}\n${p.desc}\n💵 ${p.price} Birr`, [
+          [
+            { text: "❤️ Like", callback_data: `like_${p.id}` },
+            { text: "🛒 Order", callback_data: `order_${p.id}` }
+          ]
+        ]);
+      }
+    } else if (text?.startsWith("/add") && OWNER_IDS.includes(String(chatId))) {
+      // /add name|price|desc|imgURL
+      const parts = text.replace("/add", "").split("|");
+      if (parts.length < 4) {
+        await sendText(chatId, BOT_TOKEN, "⚠️ Format: /add name|price|desc|imgURL");
+      } else {
+        const [name, price, desc, img] = parts.map(s => s.trim());
+        await sendPhoto(chatId, BOT_TOKEN, img, `✅ Added: ${name}\n💵 ${price} Birr\n${desc}`, [
+          [
+            { text: "❤️ Like", callback_data: `like_new` },
+            { text: "🛒 Order", callback_data: `order_new` }
+          ]
+        ]);
+      }
+    } else if (text?.startsWith("/edit") && OWNER_IDS.includes(String(chatId))) {
+      await sendText(chatId, BOT_TOKEN, "📝 Edit feature coming soon!");
+    } else if (text) {
+      // Customer message → forward to admins
+      for (const admin of OWNER_IDS) {
+        await sendText(admin, BOT_TOKEN, `💬 Message from ${chatId}: ${text}`);
+      }
+    }
+
+    // Always return OK to Telegram
+    return res.status(200).send("OK");
+
+  } catch (err) {
+    console.error("❌ Telegram webhook error:", err);
+    return res.status(200).send("Error handled gracefully");
   }
 };
+
+// --- helper functions ---
+async function sendText(chatId, token, text) {
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text })
+  });
+}
+
+async function sendPhoto(chatId, token, photoUrl, caption, buttons) {
+  await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      photo: photoUrl,
+      caption,
+      reply_markup: { inline_keyboard: buttons }
+    })
+  });
+}
