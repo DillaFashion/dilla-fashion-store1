@@ -1,103 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dilla Fashion Store</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
-<style>
-  body { background-color: #CFF4D2; }
-  .price { color: #1F2F98; font-weight: bold; }
-  header { background-color: #004E9A; }
-  .like-count { color: #8B4C70; font-weight: bold; display: inline-block; margin-left: 5px; }
-</style>
-</head>
-<body class="text-gray-800">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dilla Fashion</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        text-align: center;
+        padding: 1rem;
+      }
+      #map {
+        height: 400px;
+        border-radius: 15px;
+        margin: 20px auto;
+        width: 90%;
+      }
+      .btn {
+        background: #222;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>👗 Dilla Fashion</h1>
+    <p>Welcome to our online store! Chat directly with us on Telegram.</p>
 
-<header class="text-white py-5 text-center">
-  <h1 class="text-3xl font-bold">Dilla Fashion Store</h1>
-  <p class="text-sm">Shop your favorite styles directly from Telegram or WhatsApp!</p>
-</header>
+    <a class="btn" href="https://t.me/dilla_fashion_bot">💬 Chat on Telegram</a>
 
-<main class="max-w-5xl mx-auto p-6">
-  <div class="flex justify-end mb-4 gap-3">
-    <label>Sort by:</label>
-    <select id="sortOptions" class="border rounded px-2 py-1">
-      <option value="time">Time Uploaded</option>
-      <option value="price">Price</option>
-      <option value="popularity">Popularity</option>
-    </select>
-  </div>
+    <div id="map"></div>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6" id="product-grid"></div>
-</main>
-
-<footer class="text-center py-4 bg-gray-100">
-  <p>© 2025 Dilla Fashion Store | 
-    <a href="https://t.me/dilla_fashion_bot" target="_blank" class="text-blue-600">Telegram</a> | 
-    <a href="https://wa.me/251900868540" target="_blank" class="text-green-600">WhatsApp</a>
-  </p>
-</footer>
-
-<script>
-let products = [
-  {id:1,name:"Men’s Classic T-Shirt",price:450,description:"Size: M, Fabric: Cotton, Color: White",image:"https://via.placeholder.com/300x200?text=T-Shirt",likes:0,time:1},
-  {id:2,name:"Ladies Dress",price:750,description:"Size: L, Fabric: Silk, Color: Red",image:"https://via.placeholder.com/300x200?text=Dress",likes:0,time:2},
-  {id:3,name:"Kids Shorts",price:300,description:"Size: S, Fabric: Cotton, Color: Blue",image:"https://via.placeholder.com/300x200?text=Shorts",likes:0,time:3}
-];
-
-const grid=document.getElementById('product-grid');
-const sortSelect=document.getElementById('sortOptions');
-
-function renderProducts(){
-  grid.innerHTML='';
-  products.forEach(p=>{
-    const card=document.createElement('div');
-    card.className="bg-white shadow-md rounded-lg overflow-hidden text-center relative";
-    card.innerHTML=`
-      <div class="absolute top-2 right-2 flex items-center gap-1">❤️<span class="like-count" id="like-count-${p.id}">${p.likes}</span></div>
-      <img src="${p.image}" alt="${p.name}" class="w-full h-48 object-cover cursor-pointer" onclick="openChat('${p.id}')"/>
-      <div class="p-4">
-        <h2 class="font-semibold text-lg">${p.name}</h2>
-        <p class="price">${p.price} ETB</p>
-        <p class="text-sm">${p.description}</p>
-        <div class="mt-2 flex justify-center gap-3">
-          <button onclick="likeProduct(${p.id})" class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded">❤️ Like</button>
-          <a href="https://t.me/dilla_fashion_bot" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Telegram</a>
-          <a href="https://wa.me/251900868540" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">WhatsApp</a>
-        </div>
-      </div>
-    `;
-    grid.appendChild(card);
-  });
-}
-
-function likeProduct(id){
-  const product=products.find(p=>p.id===id);
-  product.likes++;
-  document.getElementById(`like-count-${id}`).textContent=product.likes;
-
-  fetch('https://dillafashion.netlify.app/.netlify/functions/telegramSendMessage',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'like',productId:id})
-  });
-}
-
-function openChat(id){
-  const product=products.find(p=>p.id===id);
-  window.open(`https://t.me/dilla_fashion_bot?start=product_${product.id}`,'_blank');
-}
-
-sortSelect.addEventListener('change',()=>{
-  const val=sortSelect.value;
-  if(val==='price') products.sort((a,b)=>a.price-b.price);
-  if(val==='time') products.sort((a,b)=>a.time-b.time);
-  if(val==='popularity') products.sort((a,b)=>b.likes-a.likes);
-  renderProducts();
-});
-
-renderProducts();
-</script>
-</body>
+    <script>
+      const map = L.map("map").setView([6.4101, 38.3102], 14); // Dilla coordinates
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
+      L.marker([6.4101, 38.3102])
+        .addTo(map)
+        .bindPopup("Dilla Fashion Store<br>Visit us in Dilla City.")
+        .openPopup();
+    </script>
+  </body>
 </html>
