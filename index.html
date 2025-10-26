@@ -13,6 +13,7 @@
 </style>
 </head>
 <body class="text-gray-800">
+
 <header class="text-white py-5 text-center">
   <h1 class="text-3xl font-bold">Dilla Fashion Store</h1>
   <p class="text-sm">Shop your favorite styles directly from Telegram or WhatsApp!</p>
@@ -27,12 +28,13 @@
       <option value="popularity">Popularity</option>
     </select>
   </div>
+
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6" id="product-grid"></div>
 </main>
 
 <footer class="text-center py-4 bg-gray-100">
   <p>© 2025 Dilla Fashion Store | 
-    <a href="https://t.me/DillaFashionBot" class="text-blue-600">Telegram</a> | 
+    <a href="https://t.me/dilla_fashion_bot" class="text-blue-600">Telegram</a> | 
     <a href="https://wa.me/251900868540" class="text-green-600">WhatsApp</a>
   </p>
 </footer>
@@ -87,7 +89,7 @@ function renderProducts() {
         <p class="text-sm">${p.description}</p>
         <div class="mt-2 flex justify-center gap-3">
           <button onclick="likeProduct(${p.id})" class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded">❤️ Like</button>
-          <a href="https://t.me/DillaFashionBot" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Telegram</a>
+          <a href="https://t.me/dilla_fashion_bot" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Telegram</a>
           <a href="https://wa.me/251900868540" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">WhatsApp</a>
         </div>
       </div>
@@ -100,11 +102,19 @@ function likeProduct(id) {
   const product = products.find(p => p.id === id);
   product.likes++;
   document.getElementById(`like-count-${id}`).textContent = product.likes;
+
+  // Sync likes to Telegram via Netlify function
+  fetch(`/.netlify/functions/telegramSendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'like', productId: id })
+  });
 }
 
 function openChat(id) {
   const product = products.find(p => p.id === id);
-  window.open(`https://t.me/DillaFashionBot?start=product_${product.id}`, '_blank');
+  // Open Telegram bot
+  window.open(`https://t.me/dilla_fashion_bot?start=product_${product.id}`, '_blank');
 }
 
 sortSelect.addEventListener('change', () => {
@@ -117,5 +127,6 @@ sortSelect.addEventListener('change', () => {
 
 renderProducts();
 </script>
+
 </body>
 </html>
