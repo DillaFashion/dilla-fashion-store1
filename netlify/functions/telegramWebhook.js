@@ -1,118 +1,114 @@
 // netlify/functions/telegramWebhook.js
 import fetch from "node-fetch";
 
-export default async (req, res) => {
-  try {
-    // Safely handle body parsing
-    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    const message = body.message || body.channel_post || {};
-    const chatId = message.chat?.id;
-    const text = message.text?.trim();
-    const callback = body.callback_query;
+const TELEGRAM_TOKEN = "YOUR_BOT_TOKEN";  // Replace with your bot token
+const API_URL = `https://api.telegram.org/bot${TELEGRAM_TOKEN}`;
+const ADMIN_IDS = ["123456789", "987654321"]; // Replace with Telegram user IDs of you & co-admins
 
-    const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-    const OWNER_IDS = (process.env.OWNER_CHAT_IDS || "").split(",").map(x => x.trim());
+let products = [
+  {
+    id: 1,
+    name: "Men’s Cotton Shirt",
+    price: "850 ETB",
+    size: "M, L, XL",
+    fabric: "100% Cotton",
+    color: "White",
+  },
+  {
+    id: 2,
+    name: "Ladies Dress",
+    price: "1200 ETB",
+    size: "S, M, L",
+    fabric: "Silk",
+    color: "Red",
+  },
+];
 
-    // Quick sanity check
-    if (!BOT_TOKEN) {
-      console.error("❌ Missing TELEGRAM_BOT_TOKEN in env");
-      return res.status(500).send("Missing bot token");
-    }
-
-    // === Handle callback_query (likes or orders) ===
-    if (callback) {
-      const cbData = callback.data;
-      const cbChat = callback.message.chat.id;
-      const cbMsgId = callback.message.message_id;
-      let replyText = "";
-
-      if (cbData.startsWith("like_")) {
-        replyText = "❤️ Thanks for liking!";
-      } else if (cbData.startsWith("order_")) {
-        replyText = "🛍 Please contact us on WhatsApp or Telegram to finalize your order.";
-      }
-
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          callback_query_id: callback.id,
-          text: replyText,
-          show_alert: false
-        })
-      });
-
-      return res.status(200).send("Callback handled");
-    }
-
-    // === Normal commands ===
-    if (text === "/start") {
-      await sendText(chatId, BOT_TOKEN, "👗 Welcome to Dilla Fashion Store!\nUse /products to see our catalog.");
-    } else if (text === "/products") {
-      const products = [
-        { id: 1, name: "Men T-Shirt", price: 450, desc: "Size M, Cotton, White", img: "https://via.placeholder.com/300x200?text=T-Shirt" },
-        { id: 2, name: "Ladies Dress", price: 850, desc: "Size M, Silk, Red", img: "https://via.placeholder.com/300x200?text=Dress" },
-        { id: 3, name: "Children Set", price: 500, desc: "Size S, Cotton, Blue", img: "https://via.placeholder.com/300x200?text=Child+Set" }
-      ];
-
-      for (const p of products) {
-        await sendPhoto(chatId, BOT_TOKEN, p.img, `${p.name}\n${p.desc}\n💵 ${p.price} Birr`, [
-          [
-            { text: "❤️ Like", callback_data: `like_${p.id}` },
-            { text: "🛒 Order", callback_data: `order_${p.id}` }
-          ]
-        ]);
-      }
-    } else if (text?.startsWith("/add") && OWNER_IDS.includes(String(chatId))) {
-      // /add name|price|desc|imgURL
-      const parts = text.replace("/add", "").split("|");
-      if (parts.length < 4) {
-        await sendText(chatId, BOT_TOKEN, "⚠️ Format: /add name|price|desc|imgURL");
-      } else {
-        const [name, price, desc, img] = parts.map(s => s.trim());
-        await sendPhoto(chatId, BOT_TOKEN, img, `✅ Added: ${name}\n💵 ${price} Birr\n${desc}`, [
-          [
-            { text: "❤️ Like", callback_data: `like_new` },
-            { text: "🛒 Order", callback_data: `order_new` }
-          ]
-        ]);
-      }
-    } else if (text?.startsWith("/edit") && OWNER_IDS.includes(String(chatId))) {
-      await sendText(chatId, BOT_TOKEN, "📝 Edit feature coming soon!");
-    } else if (text) {
-      // Customer message → forward to admins
-      for (const admin of OWNER_IDS) {
-        await sendText(admin, BOT_TOKEN, `💬 Message from ${chatId}: ${text}`);
-      }
-    }
-
-    // Always return OK to Telegram
-    return res.status(200).send("OK");
-
-  } catch (err) {
-    console.error("❌ Telegram webhook error:", err);
-    return res.status(200).send("Error handled gracefully");
-  }
-};
-
-// --- helper functions ---
-async function sendText(chatId, token, text) {
-  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+// Helper: send a message
+async function sendMessage(chatId, text, options = {}) {
+  await fetch(`${API_URL}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text })
+    body: JSON.stringify({ chat_id: chatId, text, ...options }),
   });
 }
 
-async function sendPhoto(chatId, token, photoUrl, caption, buttons) {
-  await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      photo: photoUrl,
-      caption,
-      reply_markup: { inline_keyboard: buttons }
-    })
-  });
+export async function handler(event) {
+  try {
+    const body = JSON.parse(event.body);
+    const message = body.message;
+
+    if (!message) return { statusCode: 200, body: "No message" };
+
+    const chatId = message.chat.id;
+    const text = message.text?.trim();
+
+    // START COMMAND
+    if (text === "/start") {
+      await sendMessage(
+        chatId,
+        "👋 Welcome to Dilla Fashion!\n\nBrowse our catalog or message us your request.\n\nCommands:\n/products – View catalog\n/add – Admin add product\n/edit – Admin edit product"
+      );
+    }
+
+    // PRODUCT LIST
+    else if (text === "/products") {
+      let msg = "🛍 *Available Products:*\n\n";
+      products.forEach((p) => {
+        msg += `*${p.name}*\n💰 ${p.price}\n📏 Size: ${p.size}\n🧵 Fabric: ${p.fabric}\n🎨 Color: ${p.color}\n\n`;
+      });
+      await sendMessage(chatId, msg, { parse_mode: "Markdown" });
+    }
+
+    // ADMIN ADD PRODUCT
+    else if (text?.startsWith("/add")) {
+      if (!ADMIN_IDS.includes(chatId.toString())) {
+        await sendMessage(chatId, "🚫 You are not authorized.");
+      } else {
+        const parts = text.split("|").map((t) => t.trim());
+        if (parts.length < 6) {
+          await sendMessage(chatId, "Usage:\n/add | name | price | size | fabric | color");
+        } else {
+          const [, name, price, size, fabric, color] = parts;
+          const newProduct = { id: Date.now(), name, price, size, fabric, color };
+          products.push(newProduct);
+          await sendMessage(chatId, `✅ Product *${name}* added!`, { parse_mode: "Markdown" });
+        }
+      }
+    }
+
+    // ADMIN EDIT PRODUCT
+    else if (text?.startsWith("/edit")) {
+      if (!ADMIN_IDS.includes(chatId.toString())) {
+        await sendMessage(chatId, "🚫 You are not authorized.");
+      } else {
+        const parts = text.split("|").map((t) => t.trim());
+        if (parts.length < 3) {
+          await sendMessage(chatId, "Usage:\n/edit | id | new_price");
+        } else {
+          const [, id, newPrice] = parts;
+          const product = products.find((p) => p.id.toString() === id);
+          if (!product) {
+            await sendMessage(chatId, "❌ Product not found!");
+          } else {
+            product.price = newPrice;
+            await sendMessage(chatId, `✅ Price for *${product.name}* updated to ${newPrice}`, { parse_mode: "Markdown" });
+          }
+        }
+      }
+    }
+
+    // CUSTOMER MESSAGES
+    else {
+      for (const adminId of ADMIN_IDS) {
+        await sendMessage(adminId, `📩 New message from ${message.from.first_name}:\n${text}`);
+      }
+      await sendMessage(chatId, "✅ Message received! We’ll contact you soon.");
+    }
+
+    return { statusCode: 200, body: "OK" };
+  } catch (err) {
+    console.error(err);
+    return { statusCode: 500, body: "Error" };
+  }
 }
