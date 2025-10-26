@@ -34,8 +34,8 @@
 
 <footer class="text-center py-4 bg-gray-100">
   <p>© 2025 Dilla Fashion Store | 
-    <a href="https://t.me/dilla_fashion_bot" class="text-blue-600">Telegram</a> | 
-    <a href="https://wa.me/251900868540" class="text-green-600">WhatsApp</a>
+    <a href="https://t.me/dilla_fashion_bot" target="_blank" class="text-blue-600">Telegram</a> | 
+    <a href="https://wa.me/251900868540" target="_blank" class="text-green-600">WhatsApp</a>
   </p>
 </footer>
 
@@ -103,17 +103,17 @@ function likeProduct(id) {
   product.likes++;
   document.getElementById(`like-count-${id}`).textContent = product.likes;
 
-  // Sync likes to Telegram via Netlify function
-  fetch(`/.netlify/functions/telegramSendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'like', productId: id })
+  // Sync like to Telegram bot
+  fetch('https://dillafashion.netlify.app/.netlify/functions/telegramSendMessage', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ action:'like', productId:id })
   });
 }
 
 function openChat(id) {
   const product = products.find(p => p.id === id);
-  // Open Telegram bot
+  // Opens Telegram bot directly with product reference
   window.open(`https://t.me/dilla_fashion_bot?start=product_${product.id}`, '_blank');
 }
 
