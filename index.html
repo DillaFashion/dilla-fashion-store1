@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dilla Fashion Store</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
 <style>
   body { background-color: #CFF4D2; }
   .price { color: #1F2F98; font-weight: bold; }
@@ -39,9 +39,33 @@
 
 <script>
 let products = [
-  { id: 1, name: "Men’s Classic T-Shirt", price: 450, image: "https://via.placeholder.com/300x200?text=T-Shirt", likes: 0, time: 1 },
-  { id: 2, name: "Ladies Dress", price: 750, image: "https://via.placeholder.com/300x200?text=Dress", likes: 0, time: 2 },
-  { id: 3, name: "Kids Shorts", price: 300, image: "https://via.placeholder.com/300x200?text=Shorts", likes: 0, time: 3 }
+  {
+    id: 1,
+    name: "Men’s Classic T-Shirt",
+    price: 450,
+    description: "Size: M, Fabric: Cotton, Color: White",
+    image: "https://via.placeholder.com/300x200?text=T-Shirt",
+    likes: 0,
+    time: 1
+  },
+  {
+    id: 2,
+    name: "Ladies Dress",
+    price: 750,
+    description: "Size: L, Fabric: Silk, Color: Red",
+    image: "https://via.placeholder.com/300x200?text=Dress",
+    likes: 0,
+    time: 2
+  },
+  {
+    id: 3,
+    name: "Kids Shorts",
+    price: 300,
+    description: "Size: S, Fabric: Cotton, Color: Blue",
+    image: "https://via.placeholder.com/300x200?text=Shorts",
+    likes: 0,
+    time: 3
+  }
 ];
 
 const grid = document.getElementById('product-grid');
@@ -60,6 +84,7 @@ function renderProducts() {
       <div class="p-4">
         <h2 class="font-semibold text-lg">${p.name}</h2>
         <p class="price">${p.price} ETB</p>
+        <p class="text-sm">${p.description}</p>
         <div class="mt-2 flex justify-center gap-3">
           <button onclick="likeProduct(${p.id})" class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded">❤️ Like</button>
           <a href="https://t.me/DillaFashionBot" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Telegram</a>
