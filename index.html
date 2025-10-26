@@ -1,52 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dilla Fashion Store</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dilla Fashion Store</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" />
+<style>
+  body { background-color: #CFF4D2; }
+  .price { color: #1F2F98; font-weight: bold; }
+  header { background-color: #004E9A; }
+  .like-count { color: #8B4C70; font-weight: bold; display: inline-block; margin-left: 5px; }
+</style>
 </head>
-<body class="bg-gray-50 text-gray-800">
-  <header class="bg-pink-600 text-white py-5 text-center">
-    <h1 class="text-3xl font-bold">Dilla Fashion Store</h1>
-    <p class="text-sm">Shop your favorite styles directly from Telegram or WhatsApp!</p>
-  </header>
+<body class="text-gray-800">
+<header class="text-white py-5 text-center">
+  <h1 class="text-3xl font-bold">Dilla Fashion Store</h1>
+  <p class="text-sm">Shop your favorite styles directly from Telegram or WhatsApp!</p>
+</header>
 
-  <main class="max-w-5xl mx-auto p-6">
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6" id="product-grid"></div>
-  </main>
+<main class="max-w-5xl mx-auto p-6">
+  <div class="flex justify-end mb-4 gap-3">
+    <label>Sort by:</label>
+    <select id="sortOptions" class="border rounded px-2 py-1">
+      <option value="time">Time Uploaded</option>
+      <option value="price">Price</option>
+      <option value="popularity">Popularity</option>
+    </select>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6" id="product-grid"></div>
+</main>
 
-  <footer class="text-center py-4 bg-gray-100">
-    <p>© 2025 Dilla Fashion Store | 
-      <a href="https://t.me/DillaFashionBot" class="text-blue-600">Telegram</a> | 
-      <a href="https://wa.me/251900868540" class="text-green-600">WhatsApp</a>
-    </p>
-  </footer>
+<footer class="text-center py-4 bg-gray-100">
+  <p>© 2025 Dilla Fashion Store | 
+    <a href="https://t.me/DillaFashionBot" class="text-blue-600">Telegram</a> | 
+    <a href="https://wa.me/251900868540" class="text-green-600">WhatsApp</a>
+  </p>
+</footer>
 
-  <script>
-    const products = [
-      { id: 1, name: "Men’s Classic T-Shirt", price: "450 ETB", image: "https://via.placeholder.com/300x200?text=T-Shirt" },
-      { id: 2, name: "Ladies Dress", price: "750 ETB", image: "https://via.placeholder.com/300x200?text=Dress" },
-      { id: 3, name: "Kids Shorts", price: "300 ETB", image: "https://via.placeholder.com/300x200?text=Shorts" }
-    ];
+<script>
+let products = [
+  { id: 1, name: "Men’s Classic T-Shirt", price: 450, image: "https://via.placeholder.com/300x200?text=T-Shirt", likes: 0, time: 1 },
+  { id: 2, name: "Ladies Dress", price: 750, image: "https://via.placeholder.com/300x200?text=Dress", likes: 0, time: 2 },
+  { id: 3, name: "Kids Shorts", price: 300, image: "https://via.placeholder.com/300x200?text=Shorts", likes: 0, time: 3 }
+];
 
-    const grid = document.getElementById('product-grid');
-    products.forEach(p => {
-      const card = document.createElement('div');
-      card.className = "bg-white shadow-md rounded-lg overflow-hidden text-center";
-      card.innerHTML = `
-        <img src="${p.image}" alt="${p.name}" class="w-full h-48 object-cover" />
-        <div class="p-4">
-          <h2 class="font-semibold text-lg">${p.name}</h2>
-          <p class="text-pink-600 font-bold">${p.price}</p>
-          <div class="mt-2 flex justify-center gap-3">
-            <a href="https://t.me/DillaFashionBot" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">View on Telegram</a>
-            <a href="https://wa.me/251900868540" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">WhatsApp</a>
-          </div>
+const grid = document.getElementById('product-grid');
+const sortSelect = document.getElementById('sortOptions');
+
+function renderProducts() {
+  grid.innerHTML = '';
+  products.forEach(p => {
+    const card = document.createElement('div');
+    card.className = "bg-white shadow-md rounded-lg overflow-hidden text-center relative";
+    card.innerHTML = `
+      <div class="absolute top-2 right-2 flex items-center gap-1">
+        ❤️<span class="like-count" id="like-count-${p.id}">${p.likes}</span>
+      </div>
+      <img src="${p.image}" alt="${p.name}" class="w-full h-48 object-cover cursor-pointer" onclick="openChat('${p.id}')"/>
+      <div class="p-4">
+        <h2 class="font-semibold text-lg">${p.name}</h2>
+        <p class="price">${p.price} ETB</p>
+        <div class="mt-2 flex justify-center gap-3">
+          <button onclick="likeProduct(${p.id})" class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded">❤️ Like</button>
+          <a href="https://t.me/DillaFashionBot" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Telegram</a>
+          <a href="https://wa.me/251900868540" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">WhatsApp</a>
         </div>
-      `;
-      grid.appendChild(card);
-    });
-  </script>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function likeProduct(id) {
+  const product = products.find(p => p.id === id);
+  product.likes++;
+  document.getElementById(`like-count-${id}`).textContent = product.likes;
+}
+
+function openChat(id) {
+  const product = products.find(p => p.id === id);
+  window.open(`https://t.me/DillaFashionBot?start=product_${product.id}`, '_blank');
+}
+
+sortSelect.addEventListener('change', () => {
+  const val = sortSelect.value;
+  if(val==='price') products.sort((a,b)=>a.price-b.price);
+  if(val==='time') products.sort((a,b)=>a.time-b.time);
+  if(val==='popularity') products.sort((a,b)=>b.likes-a.likes);
+  renderProducts();
+});
+
+renderProducts();
+</script>
 </body>
 </html>
