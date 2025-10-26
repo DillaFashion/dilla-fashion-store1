@@ -41,47 +41,21 @@
 
 <script>
 let products = [
-  {
-    id: 1,
-    name: "Men’s Classic T-Shirt",
-    price: 450,
-    description: "Size: M, Fabric: Cotton, Color: White",
-    image: "https://via.placeholder.com/300x200?text=T-Shirt",
-    likes: 0,
-    time: 1
-  },
-  {
-    id: 2,
-    name: "Ladies Dress",
-    price: 750,
-    description: "Size: L, Fabric: Silk, Color: Red",
-    image: "https://via.placeholder.com/300x200?text=Dress",
-    likes: 0,
-    time: 2
-  },
-  {
-    id: 3,
-    name: "Kids Shorts",
-    price: 300,
-    description: "Size: S, Fabric: Cotton, Color: Blue",
-    image: "https://via.placeholder.com/300x200?text=Shorts",
-    likes: 0,
-    time: 3
-  }
+  {id:1,name:"Men’s Classic T-Shirt",price:450,description:"Size: M, Fabric: Cotton, Color: White",image:"https://via.placeholder.com/300x200?text=T-Shirt",likes:0,time:1},
+  {id:2,name:"Ladies Dress",price:750,description:"Size: L, Fabric: Silk, Color: Red",image:"https://via.placeholder.com/300x200?text=Dress",likes:0,time:2},
+  {id:3,name:"Kids Shorts",price:300,description:"Size: S, Fabric: Cotton, Color: Blue",image:"https://via.placeholder.com/300x200?text=Shorts",likes:0,time:3}
 ];
 
-const grid = document.getElementById('product-grid');
-const sortSelect = document.getElementById('sortOptions');
+const grid=document.getElementById('product-grid');
+const sortSelect=document.getElementById('sortOptions');
 
-function renderProducts() {
-  grid.innerHTML = '';
-  products.forEach(p => {
-    const card = document.createElement('div');
-    card.className = "bg-white shadow-md rounded-lg overflow-hidden text-center relative";
-    card.innerHTML = `
-      <div class="absolute top-2 right-2 flex items-center gap-1">
-        ❤️<span class="like-count" id="like-count-${p.id}">${p.likes}</span>
-      </div>
+function renderProducts(){
+  grid.innerHTML='';
+  products.forEach(p=>{
+    const card=document.createElement('div');
+    card.className="bg-white shadow-md rounded-lg overflow-hidden text-center relative";
+    card.innerHTML=`
+      <div class="absolute top-2 right-2 flex items-center gap-1">❤️<span class="like-count" id="like-count-${p.id}">${p.likes}</span></div>
       <img src="${p.image}" alt="${p.name}" class="w-full h-48 object-cover cursor-pointer" onclick="openChat('${p.id}')"/>
       <div class="p-4">
         <h2 class="font-semibold text-lg">${p.name}</h2>
@@ -98,27 +72,25 @@ function renderProducts() {
   });
 }
 
-function likeProduct(id) {
-  const product = products.find(p => p.id === id);
+function likeProduct(id){
+  const product=products.find(p=>p.id===id);
   product.likes++;
-  document.getElementById(`like-count-${id}`).textContent = product.likes;
+  document.getElementById(`like-count-${id}`).textContent=product.likes;
 
-  // Sync like to Telegram bot
-  fetch('https://dillafashion.netlify.app/.netlify/functions/telegramSendMessage', {
+  fetch('https://dillafashion.netlify.app/.netlify/functions/telegramSendMessage',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ action:'like', productId:id })
+    body:JSON.stringify({action:'like',productId:id})
   });
 }
 
-function openChat(id) {
-  const product = products.find(p => p.id === id);
-  // Opens Telegram bot directly with product reference
-  window.open(`https://t.me/dilla_fashion_bot?start=product_${product.id}`, '_blank');
+function openChat(id){
+  const product=products.find(p=>p.id===id);
+  window.open(`https://t.me/dilla_fashion_bot?start=product_${product.id}`,'_blank');
 }
 
-sortSelect.addEventListener('change', () => {
-  const val = sortSelect.value;
+sortSelect.addEventListener('change',()=>{
+  const val=sortSelect.value;
   if(val==='price') products.sort((a,b)=>a.price-b.price);
   if(val==='time') products.sort((a,b)=>a.time-b.time);
   if(val==='popularity') products.sort((a,b)=>b.likes-a.likes);
@@ -127,6 +99,5 @@ sortSelect.addEventListener('change', () => {
 
 renderProducts();
 </script>
-
 </body>
 </html>
