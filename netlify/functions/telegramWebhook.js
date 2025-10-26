@@ -3,20 +3,20 @@ import fetch from "node-fetch";
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const OWNER_CHAT_IDS = process.env.OWNER_CHAT_IDS.split(",");
 
-let products = [];
+let products=[];
 
-async function sendMessage(chatId, text, replyMarkup=null){
+async function sendMessage(chatId,text,replyMarkup=null){
   const body={chat_id:chatId,text};
   if(replyMarkup) body.reply_markup=replyMarkup;
   await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,{
-    method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)
+    method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)
   });
 }
 
-async function sendProduct(chatId, product){
-  const keyboard={inline_keyboard:[[ {text:"❤️ Like",callback_data:`like_${product.id}`},{text:"🛒 Order",callback_data:`order_${product.id}`} ]]};
+async function sendProduct(chatId,product){
+  const keyboard={inline_keyboard:[[{text:"❤️ Like",callback_data:`like_${product.id}`},{text:"🛒 Order",callback_data:`order_${product.id}` }]]};
   await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`,{
-    method:"POST", headers:{"Content-Type":"application/json"},
+    method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({chat_id:chatId,photo:product.image,caption:`${product.name}\nPrice: ${product.price} ETB\n${product.description}`,reply_markup:keyboard})
   });
 }
@@ -24,6 +24,7 @@ async function sendProduct(chatId, product){
 export default async (req,res)=>{
   try{
     const body=JSON.parse(req.body);
+
     if(body.message){
       const chatId=body.message.chat.id;
       const text=body.message.text;
@@ -39,6 +40,7 @@ export default async (req,res)=>{
       if(text=="/start") await sendMessage(chatId,"👋 Welcome! Use /products to see catalog.");
       if(text=="/products") for(const p of products) await sendProduct(chatId,p);
 
+      // Admin commands
       if(text.startsWith("/add") && OWNER_CHAT_IDS.includes(chatId.toString())){
         const args=text.replace("/add ","").split("|");
         if(args.length<4) return sendMessage(chatId,"❌ Format: /add name|price|description|imageURL");
@@ -46,7 +48,6 @@ export default async (req,res)=>{
         const newId=products.length+1;
         products.push({id:newId,name,price,description,image,likes:0,time:Date.now()});
         await sendMessage(chatId,`✅ Product added: ${name}`);
-        if(OWNER_CHAT_IDS[0].startsWith("-100")) await sendProduct(OWNER_CHAT_IDS[0],products[products.length-1]);
       }
 
       if(text.startsWith("/edit") && OWNER_CHAT_IDS.includes(chatId.toString())){
@@ -62,4 +63,38 @@ export default async (req,res)=>{
 
     else if(body.callback_query){
       const callback=body.callback_query;
-      const data=callback.data
+      const data=callback.data;
+      const chatId=callback.message.chat.id;
+
+      if(data.startsWith("like_")){
+        const id=data.split("_")[1];
+        const product=products.find(p=>p.id==id);
+        product.likes++;
+        await sendMessage(chatId,`❤️ You liked ${product.name}. Total likes: ${product.likes}`);
+      }
+
+      if(data.startsWith("order_")){
+        const id=data.split("_")[1];
+        const product=products.find(p=>p.id==id);
+        OWNER_CHAT_IDS.forEach(async id=>{
+          await sendMessage(id,`🛍️ New order: ${product.name} from @${callback.from.username || callback.from.first_name}`);
+        });
+        const keyboard={keyboard:[[ {text:"📍 Send Location", request_location:true} ]],one_time_keyboard:true};
+        await sendMessage(chatId,"Please share your location for delivery:",keyboard);
+      }
+    }
+
+    if(body.message && body.message.location){
+      const loc=body.message.location;
+      OWNER_CHAT_IDS.forEach(async id=>{
+        await sendMessage(id,`📍 Location from @${body.message.from.username || body.message.from.first_name}: Lat ${loc.latitude}, Lng ${loc.longitude}`);
+      });
+      await sendMessage(body.message.chat.id,"✅ Location received. We will process your order!");
+    }
+
+    res.status(200).send("OK");
+  }catch(err){
+    console.error(err);
+    res.status(500).send("Error processing webhook");
+  }
+};
