@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "name": "Men's T-Shirt",
+    "price": 300,
+    "description": "Size L, cotton, blue",
+    "likes": 0
+  },
+  {
+    "id": 2,
+    "name": "Women's Dress",
+    "price": 600,
+    "description": "Size M, silk, red",
+    "likes": 0
+  },
+  {
+    "id": 3,
+    "name": "Children's Shorts",
+    "price": 200,
+    "description": "Size S, cotton, green",
+    "likes": 0
+  }
+]
