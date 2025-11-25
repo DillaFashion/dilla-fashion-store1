@@ -1,8 +1,0 @@
-[build]
-  command = ""  # no build command for static site
-  publish = "site"  # you already have site/index.html
-  functions = "netlify/functions"
-
-[functions]
-  node_bundler = "esbuild"
-  external_node_modules = ["node-fetch"]
