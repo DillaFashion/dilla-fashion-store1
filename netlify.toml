@@ -1,5 +1,6 @@
 [build]
-  publish = "site"
+  command = ""  # no build command for static site
+  publish = "site"  # you already have site/index.html
   functions = "netlify/functions"
 
 [functions]
